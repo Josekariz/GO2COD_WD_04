@@ -6,7 +6,6 @@ const App = () => {
   const [images, setImages] = useState([]);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [hasMore, setHasMore] = useState(true);
@@ -16,12 +15,10 @@ const App = () => {
   const PER_PAGE = 15;
 
   const fetchImages = async (pageNum, query = '') => {
-    setLoading(true);
     setError(null);
 
     if (!API_KEY) {
       setError('API key is missing. Please check your environment variables.');
-      setLoading(false);
       return;
     }
 
@@ -57,10 +54,8 @@ const App = () => {
       setError(error.message);
       setHasMore(false);
     }
-    setLoading(false);
   };
 
-  // Debounced search implementation
   const debouncedSearch = useCallback(
     debounce((query) => {
       setSearchQuery(query);
