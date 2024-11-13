@@ -119,9 +119,90 @@ const App = () => {
           </div>
         </div>
       </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 pt-32 pb-8">
+        {error && (
+          <div className="bg-red-500 text-white p-4 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
+        <InfiniteScroll
+          dataLength={images.length}
+          next={loadMore}
+          hasMore={hasMore}
+          loader={
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          }
+        >
+          <div className="gallery-grid">
+            {images.map((image) => (
+              <div
+                key={image.id}
+                className="gallery-item relative group cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl m-2"
+                onClick={() => setSelectedImage(image)}
+              >
+                <div className="relative h-full rounded-lg overflow-hidden">
+                  <img
+                    src={image.src.large}
+                    alt={image.photographer}
+                    className="object-cover w-full h-full"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <p className="text-sm">Photo by {image.photographer}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </InfiniteScroll>
+      </main>
+
+      {/* Lightbox Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-7xl w-full mx-auto flex flex-col items-center">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 z-50 bg-gray-800/50 px-4 py-2 rounded-lg backdrop-blur-sm"
+            >
+              Return to Gallery
+            </button>
+            <img
+              src={selectedImage.src.large2x}
+              alt={selectedImage.photographer}
+              className="lightbox-image rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="mt-4 text-center">
+              <p className="text-lg">Photo by {selectedImage.photographer}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
+// Debounce utility function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
 }
 
 export default App;
