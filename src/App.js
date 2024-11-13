@@ -2,6 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 
+// Move debounce hook outside component to prevent recreating it on every render
+const useDebounce = (callback, delay) => {
+  const debouncedCallback = useCallback(
+    (...args) => {
+      const timeoutId = setTimeout(() => callback(...args), delay);
+      return () => clearTimeout(timeoutId);
+    },
+    [callback, delay]
+  );
+  return debouncedCallback;
+};
+
 const App = () => {
   const [images, setImages] = useState([]);
   const [page, setPage] = useState(1);
@@ -14,7 +26,7 @@ const App = () => {
   const API_KEY = process.env.REACT_APP_PEXELS_API_KEY;
   const PER_PAGE = 15;
 
-  const fetchImages = async (pageNum, query = '') => {
+  const fetchImages = useCallback(async (pageNum, query = '') => {
     setError(null);
 
     if (!API_KEY) {
@@ -41,6 +53,7 @@ const App = () => {
       }
 
       const data = await response.json();
+      const totalResults = data.total_results || 0;
 
       if (pageNum === 1) {
         setImages(data.photos);
@@ -48,52 +61,46 @@ const App = () => {
         setImages(prev => [...prev, ...data.photos]);
       }
 
-      setHasMore(data.total_results > page * PER_PAGE);
+      setHasMore(totalResults > pageNum * PER_PAGE);
     } catch (error) {
       console.error('Error fetching images:', error);
       setError(error.message);
       setHasMore(false);
     }
-  };
+  }, [API_KEY]); // API_KEY is the only external dependency needed
 
-  const debouncedSearch = useCallback(
-    debounce((query) => {
-      setSearchQuery(query);
-      setPage(1);
-    }, 500),
-    []
-  );
+  const handleSearch = useCallback((query) => {
+    setSearchQuery(query);
+    setPage(1);
+  }, []); // No dependencies needed since setSearchQuery and setPage are stable
+
+  const debouncedSearch = useDebounce(handleSearch, 500);
 
   useEffect(() => {
-    fetchImages(1, searchQuery);
-  }, [searchQuery]);
+    fetchImages(page, searchQuery);
+  }, [fetchImages, page, searchQuery]);
 
-  const loadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchImages(nextPage, searchQuery);
-  };
+  const loadMore = useCallback(() => {
+    setPage(prev => prev + 1);
+  }, []); // No dependencies needed since setPage is stable
 
-  const handleSearchInput = (e) => {
+  const handleSearchInput = useCallback((e) => {
     const value = e.target.value;
     setSearchInput(value);
     debouncedSearch(value);
-  };
+  }, [debouncedSearch]);
 
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setSearchInput('');
     setSearchQuery('');
     setPage(1);
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-10 bg-gray-800/95 backdrop-blur-sm shadow-lg">
         <div className="container mx-auto px-4 py-4">
           <h1 className="app-title text-4xl font-bold mb-4 text-center tracking-wide">Sejoz Galer</h1>
-
-          {/* Search Bar */}
           <div className="relative max-w-md mx-auto">
             <input
               type="text"
@@ -115,7 +122,6 @@ const App = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 pt-32 pb-8">
         {error && (
           <div className="bg-red-500 text-white p-4 rounded-lg mb-6">
@@ -158,7 +164,6 @@ const App = () => {
         </InfiniteScroll>
       </main>
 
-      {/* Lightbox Modal */}
       {selectedImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
@@ -186,18 +191,5 @@ const App = () => {
     </div>
   );
 };
-
-// Debounce utility function
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
 
 export default App;
